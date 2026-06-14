@@ -83,7 +83,7 @@ io.on("connection", (socket) => {
         const roomCode = String(code).trim().toUpperCase();
         console.log(`[game:start] socket=${socket.id}, code=${roomCode}`);
         try {
-            const room = (0, rooms_1.startGame)(roomCode);
+            const room = (0, rooms_1.startGame)(roomCode, socket.id);
             console.log(`[game:start] game started, handNumber=${room.state?.handNumber}, handOver=${room.state?.handOver}`);
             broadcastStateUpdate(room.code);
             cb({ ok: true });
@@ -112,7 +112,7 @@ io.on("connection", (socket) => {
         const roomCode = String(code).trim().toUpperCase();
         console.log(`[hand:next] socket=${socket.id}, code=${roomCode}`);
         try {
-            const room = (0, rooms_1.nextHand)(roomCode);
+            const room = (0, rooms_1.nextHand)(roomCode, socket.id);
             console.log(`[hand:next] new hand started, handNumber=${room.state?.handNumber}`);
             broadcastStateUpdate(room.code);
             cb({ ok: true });
