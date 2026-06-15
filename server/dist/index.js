@@ -8,6 +8,7 @@ const cors_1 = __importDefault(require("cors"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const rooms_1 = require("./rooms");
+const stateView_1 = require("./stateView");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.get("/health", (_, res) => {
@@ -40,7 +41,7 @@ function broadcastStateUpdate(roomCode) {
             const branchMoves = legalMoves.filter((m) => m.type === "play" && m.position?.startsWith("branch-"));
             console.log(`[DEBUG broadcastStateUpdate] socket=${socketId}, legalMoves=${legalMoves.length}, branchMoves=${branchMoves.length}`, branchMoves.length > 0 ? branchMoves.map((m) => m.position) : "");
             socket.emit("state:update", {
-                state: room.state,
+                state: (0, stateView_1.stateForPlayer)(room.state, socketId),
                 legalMoves,
                 canDraw,
             });
@@ -71,7 +72,13 @@ io.on("connection", (socket) => {
             socket.join(room.code);
             io.to(room.code).emit("room:update", { players: room.players });
             console.log(`[room:join] joined room=${room.code}, players=${room.players.length}`);
-            cb({ ok: true, roomCode: room.code, you: socket.id, players: room.players, state: room.state });
+            cb({
+                ok: true,
+                roomCode: room.code,
+                you: socket.id,
+                players: room.players,
+                state: room.state ? (0, stateView_1.stateForPlayer)(room.state, socket.id) : null,
+            });
         }
         catch (err) {
             const message = err instanceof Error ? err.message : "unknown error";
@@ -83,7 +90,7 @@ io.on("connection", (socket) => {
         const roomCode = String(code).trim().toUpperCase();
         console.log(`[game:start] socket=${socket.id}, code=${roomCode}`);
         try {
-            const room = (0, rooms_1.startGame)(roomCode);
+            const room = (0, rooms_1.startGame)(roomCode, socket.id);
             console.log(`[game:start] game started, handNumber=${room.state?.handNumber}, handOver=${room.state?.handOver}`);
             broadcastStateUpdate(room.code);
             cb({ ok: true });
@@ -112,7 +119,7 @@ io.on("connection", (socket) => {
         const roomCode = String(code).trim().toUpperCase();
         console.log(`[hand:next] socket=${socket.id}, code=${roomCode}`);
         try {
-            const room = (0, rooms_1.nextHand)(roomCode);
+            const room = (0, rooms_1.nextHand)(roomCode, socket.id);
             console.log(`[hand:next] new hand started, handNumber=${room.state?.handNumber}`);
             broadcastStateUpdate(room.code);
             cb({ ok: true });
