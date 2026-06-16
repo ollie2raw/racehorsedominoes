@@ -67,21 +67,28 @@ export function getRoom(code: string): Room {
   return room;
 }
 
-export function startGame(code: string): Room {
+function assertRoomPlayer(room: Room, socketId: string): void {
+  if (!room.players.includes(socketId)) {
+    throw new Error("Socket is not a player in this room.");
+  }
+}
+
+export function startGame(code: string, socketId: string): Room {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
 
   if (room.players.length !== 2) {
     throw new Error("Need exactly 2 players to start.");
   }
 
-  // Defensive: If game is in a stale state (handOver but not gameOver), allow restart
-  // This handles edge cases where the room got stuck
-  if (room.state && !room.state.gameOver && !room.state.handOver) {
-    // Game is actively in progress - don't allow restart
+  if (room.state && !room.state.gameOver) {
+    if (room.state.handOver) {
+      throw new Error("Hand is over. Start the next hand instead.");
+    }
     throw new Error("Game is already in progress.");
   }
 
-  // Create fresh game state (either first start or restart after stale state)
+  // Create fresh game state for the first game or a new match after game over.
   const state0 = createInitialState(room.players, room.config);
   const state1 = startNewHand(state0);
 
@@ -96,8 +103,9 @@ export function startGame(code: string): Room {
   return room;
 }
 
-export function nextHand(code: string): Room {
+export function nextHand(code: string, socketId: string): Room {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
   if (!room.state) throw new Error("Game not started.");
 
   if (!room.state.handOver) {
