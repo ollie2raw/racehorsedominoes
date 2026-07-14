@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRoom, joinRoom, nextHand, startGame } from "./rooms";
+import { act, createRoom, joinRoom, nextHand, startGame } from "./rooms";
 
 describe("room lifecycle authorization", () => {
   it("rejects game start attempts from sockets that are not room players", () => {
@@ -43,5 +43,15 @@ describe("room lifecycle authorization", () => {
     };
 
     expect(() => nextHand(room.code, "intruder")).toThrow("Not a room member.");
+  });
+
+  it("rejects game actions from sockets that are not room players", () => {
+    const room = createRoom("action-a");
+    joinRoom(room.code, "action-b");
+    startGame(room.code, "action-a");
+
+    expect(() => act(room.code, "intruder", { type: "PASS" })).toThrow(
+      "Not a room member."
+    );
   });
 });
