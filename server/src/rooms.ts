@@ -18,7 +18,14 @@ export type Room = {
   config: Partial<Config>;
 };
 
+export type RoomStatePayload = {
+  state: GameState;
+  legalMoves: ReturnType<typeof getLegalMoves>;
+  canDraw: boolean;
+};
+
 const rooms = new Map<RoomCode, Room>();
+const HIDDEN_TILE = { high: -1, low: -1 };
 
 function makeCode(len = 5): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -67,21 +74,59 @@ export function getRoom(code: string): Room {
   return room;
 }
 
-export function startGame(code: string): Room {
+function assertRoomPlayer(room: Room, socketId: string): void {
+  if (!room.players.includes(socketId)) {
+    throw new Error("Socket is not a player in this room.");
+  }
+}
+
+function hiddenTiles(count: number) {
+  return Array.from({ length: count }, () => ({ ...HIDDEN_TILE }));
+}
+
+export function getVisibleGameState(state: GameState, viewerId: string): GameState {
+  const players = Object.fromEntries(
+    Object.entries(state.players).map(([playerId, player]) => [
+      playerId,
+      {
+        ...player,
+        hand: playerId === viewerId ? player.hand : hiddenTiles(player.hand.length),
+      },
+    ])
+  ) as GameState["players"];
+
+  return {
+    ...state,
+    players,
+    boneyard: hiddenTiles(state.boneyard.length),
+    deadTiles: hiddenTiles(state.deadTiles.length),
+  };
+}
+
+export function getRoomStatePayload(code: string, socketId: string): RoomStatePayload {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
+  if (!room.state) throw new Error("Game not started.");
+
+  return {
+    state: getVisibleGameState(room.state, socketId),
+    legalMoves: getRoomLegalMoves(code, socketId),
+    canDraw: getRoomCanDraw(code, socketId),
+  };
+}
+
+export function startGame(code: string, socketId: string): Room {
+  const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
 
   if (room.players.length !== 2) {
     throw new Error("Need exactly 2 players to start.");
   }
 
-  // Defensive: If game is in a stale state (handOver but not gameOver), allow restart
-  // This handles edge cases where the room got stuck
-  if (room.state && !room.state.gameOver && !room.state.handOver) {
-    // Game is actively in progress - don't allow restart
+  if (room.state && !room.state.gameOver) {
     throw new Error("Game is already in progress.");
   }
 
-  // Create fresh game state (either first start or restart after stale state)
   const state0 = createInitialState(room.players, room.config);
   const state1 = startNewHand(state0);
 
@@ -96,8 +141,10 @@ export function startGame(code: string): Room {
   return room;
 }
 
-export function nextHand(code: string): Room {
+export function nextHand(code: string, socketId: string): Room {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
+
   if (!room.state) throw new Error("Game not started.");
 
   if (!room.state.handOver) {
@@ -134,6 +181,8 @@ export function act(
   action: ActionPayload
 ): Room {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
+
   if (!room.state) throw new Error("Game not started.");
 
   let state = room.state;
