@@ -10,9 +10,7 @@ import {
   act,
   nextHand,
   getRoom,
-  getRoomLegalMoves,
-  getRoomCanDraw,
-  getVisibleGameState,
+  getRoomStatePayload,
 } from "./rooms";
 
 const app = express();
@@ -45,23 +43,18 @@ function broadcastStateUpdate(roomCode: string) {
   for (const socketId of sockets) {
     const socket = io.sockets.sockets.get(socketId);
     if (socket) {
-      const legalMoves = getRoomLegalMoves(roomCode, socketId);
-      const canDraw = getRoomCanDraw(roomCode, socketId);
+      const payload = getRoomStatePayload(roomCode, socketId);
 
       // DEBUG: Log legal moves info
-      const branchMoves = legalMoves.filter(
+      const branchMoves = payload.legalMoves.filter(
         (m: any) => m.type === "play" && m.position?.startsWith("branch-")
       );
       console.log(
-        `[DEBUG broadcastStateUpdate] socket=${socketId}, legalMoves=${legalMoves.length}, branchMoves=${branchMoves.length}`,
+        `[DEBUG broadcastStateUpdate] socket=${socketId}, legalMoves=${payload.legalMoves.length}, branchMoves=${branchMoves.length}`,
         branchMoves.length > 0 ? branchMoves.map((m: any) => m.position) : ""
       );
 
-      socket.emit("state:update", {
-        state: getVisibleGameState(room.state, socketId),
-        legalMoves,
-        canDraw,
-      });
+      socket.emit("state:update", payload);
     }
   }
 }
@@ -96,7 +89,7 @@ io.on("connection", (socket: Socket) => {
         roomCode: room.code,
         you: socket.id,
         players: room.players,
-        state: room.state ? getVisibleGameState(room.state, socket.id) : null,
+        state: room.state ? getRoomStatePayload(room.code, socket.id).state : null,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";

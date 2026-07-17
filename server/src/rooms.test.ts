@@ -42,6 +42,14 @@ describe("room lifecycle authorization", () => {
     );
   });
 
+  it("rejects actions from a socket that is not seated in the room", () => {
+    const room = startedRoom();
+
+    expect(() =>
+      rooms.act(room.code, uniqueId("intruder"), { type: "DRAW" })
+    ).toThrow("not a player");
+  });
+
   it("does not allow game:start to reset scores between hands", () => {
     const room = startedRoom();
     const playerId = room.players[0];
@@ -91,5 +99,26 @@ describe("visible game state", () => {
     expect(
       visible.deadTiles.every((tile) => tile.high === -1 && tile.low === -1)
     ).toBe(true);
+  });
+
+  it("builds a masked socket state payload for the requesting player", () => {
+    const room = startedRoom();
+    const viewerId = room.players[0];
+    const opponentId = room.players[1];
+    const payload = rooms.getRoomStatePayload(room.code, viewerId);
+
+    expect(payload.state.players[viewerId].hand).toEqual(
+      room.state.players[viewerId].hand
+    );
+    expect(
+      payload.state.players[opponentId].hand.every(
+        (tile) => tile.high === -1 && tile.low === -1
+      )
+    ).toBe(true);
+    expect(
+      payload.state.boneyard.every((tile) => tile.high === -1 && tile.low === -1)
+    ).toBe(true);
+    expect(payload.legalMoves).toEqual(rooms.getRoomLegalMoves(room.code, viewerId));
+    expect(payload.canDraw).toBe(rooms.getRoomCanDraw(room.code, viewerId));
   });
 });

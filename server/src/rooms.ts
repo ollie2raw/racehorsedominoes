@@ -18,6 +18,12 @@ export type Room = {
   config: Partial<Config>;
 };
 
+export type RoomStatePayload = {
+  state: GameState;
+  legalMoves: ReturnType<typeof getLegalMoves>;
+  canDraw: boolean;
+};
+
 const rooms = new Map<RoomCode, Room>();
 const HIDDEN_TILE = { high: -1, low: -1 };
 
@@ -94,6 +100,18 @@ export function getVisibleGameState(state: GameState, viewerId: string): GameSta
     players,
     boneyard: hiddenTiles(state.boneyard.length),
     deadTiles: hiddenTiles(state.deadTiles.length),
+  };
+}
+
+export function getRoomStatePayload(code: string, socketId: string): RoomStatePayload {
+  const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
+  if (!room.state) throw new Error("Game not started.");
+
+  return {
+    state: getVisibleGameState(room.state, socketId),
+    legalMoves: getRoomLegalMoves(code, socketId),
+    canDraw: getRoomCanDraw(code, socketId),
   };
 }
 
