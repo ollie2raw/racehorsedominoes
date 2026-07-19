@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  act,
   createRoom,
   getVisibleGameState,
   joinRoom,
@@ -57,6 +58,15 @@ describe("rooms", () => {
 
     expect(() => nextHand(room.code, "intruder")).toThrow(/not a player/i);
     expect(room.state.handNumber).toBe(3);
+  });
+
+  it("rejects game actions from sockets that are not room players", () => {
+    const room = createRoom("host");
+    joinRoom(room.code, "guest");
+    room.state = makeHandOverState(room.players);
+
+    expect(() => act(room.code, "intruder", { type: "PASS" })).toThrow(/not a player/i);
+    expect(room.state.consecutivePasses).toBe(0);
   });
 
   it("does not let game:start reset scores between hands", () => {
