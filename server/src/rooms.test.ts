@@ -77,4 +77,16 @@ describe("room security and lifecycle", () => {
     );
     expect(room.state?.handNumber).toBe(1);
   });
+
+  it("rejects game actions from sockets outside the room", () => {
+    const room = Rooms.createRoom("A");
+    Rooms.joinRoom(room.code, "B");
+    Rooms.startGame(room.code, "A");
+    const stateBefore = room.state;
+
+    expect(() => Rooms.act(room.code, "intruder", { type: "DRAW" })).toThrow(
+      "Socket is not a player in this room."
+    );
+    expect(room.state).toBe(stateBefore);
+  });
 });
