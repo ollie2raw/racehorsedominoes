@@ -1451,4 +1451,8 @@ describe("canDraw function", () => {
     expect(canDraw(state, "A")).toBe(false);
   });
 
+  it("rejects maliciously large domino sets before generating tiles", () => {
+    expect(() => createInitialState(["A", "B"], { maxPips: 100000 })).toThrow(/maxPips/i);
+  });
+
 });
