@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  act,
   createRoom,
   getVisibleGameState,
   joinRoom,
@@ -33,6 +34,14 @@ describe("room lifecycle security", () => {
 
     expect(() => nextHand(room.code, "intruder")).toThrow("Not a player in this room.");
     expect(room.state.handOver).toBe(true);
+  });
+
+  it("rejects game actions from sockets that are not seated in the room", () => {
+    const room = createRoom("player-a");
+    joinRoom(room.code, "player-b");
+    startGame(room.code, "player-a");
+
+    expect(() => act(room.code, "intruder", { type: "PASS" })).toThrow("Not a player in this room.");
   });
 
   it("rejects game:start between hands so accumulated scores cannot be reset", () => {
