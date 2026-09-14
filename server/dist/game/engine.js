@@ -11,6 +11,7 @@ exports.applyMove = applyMove;
 const types_1 = require("./types");
 const scoring_1 = require("./scoring");
 // ─── Internal helpers ─────────────────────────────────────
+const MAX_CONFIG_MAX_PIPS = 12;
 function generateFullSet(maxPips) {
     const tiles = [];
     for (let high = 0; high <= maxPips; high++) {
@@ -83,6 +84,9 @@ function isGoingOutIllegal(state, playerId, tile, position) {
     return (0, scoring_1.computePlayScore)(simBoard, state.config) > 0;
 }
 function validateConfig(playerCount, cfg) {
+    if (!Number.isInteger(cfg.maxPips) || cfg.maxPips < 1 || cfg.maxPips > MAX_CONFIG_MAX_PIPS) {
+        throw new Error(`Invalid config: maxPips must be an integer between 1 and ${MAX_CONFIG_MAX_PIPS}.`);
+    }
     const total = (0, types_1.totalTilesInSet)(cfg.maxPips);
     const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
     if (needed > total) {
