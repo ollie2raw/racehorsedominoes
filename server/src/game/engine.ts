@@ -27,6 +27,8 @@ import {
 
 // ─── Internal helpers ─────────────────────────────────────
 
+const MAX_CONFIG_MAX_PIPS = 12;
+
 function generateFullSet(maxPips: number): Tile[] {
   const tiles: Tile[] = [];
   for (let high = 0; high <= maxPips; high++) {
@@ -96,6 +98,10 @@ function isGoingOutIllegal(
 }
 
 function validateConfig(playerCount: number, cfg: Config): void {
+  if (!Number.isInteger(cfg.maxPips) || cfg.maxPips < 1 || cfg.maxPips > MAX_CONFIG_MAX_PIPS) {
+    throw new Error(`Invalid config: maxPips must be an integer between 1 and ${MAX_CONFIG_MAX_PIPS}.`);
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
