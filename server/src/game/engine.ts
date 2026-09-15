@@ -95,7 +95,34 @@ function isGoingOutIllegal(
   return false;
 }
 
+const MAX_SUPPORTED_PIPS = 12;
+
+function assertIntegerInRange(
+  name: string,
+  value: number,
+  min: number,
+  max: number
+): void {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  }
+}
+
 function validateConfig(playerCount: number, cfg: Config): void {
+  assertIntegerInRange('maxPips', cfg.maxPips, 1, MAX_SUPPORTED_PIPS);
+  assertIntegerInRange('tilesPerPlayer', cfg.tilesPerPlayer, 1, totalTilesInSet(cfg.maxPips));
+  assertIntegerInRange('deadTileCount', cfg.deadTileCount, 0, totalTilesInSet(cfg.maxPips));
+  assertIntegerInRange('scoringMultiple', cfg.scoringMultiple, 1, Number.MAX_SAFE_INTEGER);
+  assertIntegerInRange('winningScore', cfg.winningScore, 1, Number.MAX_SAFE_INTEGER);
+
+  if (!['lowestPips', 'noScore'].includes(cfg.blockedHandRule)) {
+    throw new Error('blockedHandRule must be "lowestPips" or "noScore".');
+  }
+
+  if (!['sumOpponentPenalties', 'none'].includes(cfg.endHandBonus)) {
+    throw new Error('endHandBonus must be "sumOpponentPenalties" or "none".');
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
