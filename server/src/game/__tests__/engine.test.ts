@@ -213,6 +213,14 @@ describe("Racehorse Engine Core Rules", () => {
 
 });
 
+describe("Config validation", () => {
+  it("rejects maxPips values that would generate unsafe tile sets", () => {
+    expect(() => createInitialState(["A", "B"], { maxPips: 1_000_000 })).toThrow(
+      /maxPips/i
+    );
+  });
+});
+
 describe("Scoring: Points = sum/5", () => {
 
   it("scores 1 point when sum is 5", () => {
