@@ -1,4 +1,4 @@
-import { GameState, Config, PlacementPosition, Move } from "./game/types";
+import { GameState, Config, PlacementPosition, Move, Tile } from "./game/types";
 import {
   createInitialState,
   startNewHand,
@@ -19,6 +19,34 @@ export type Room = {
 };
 
 const rooms = new Map<RoomCode, Room>();
+
+const HIDDEN_TILE: Tile = { high: -1, low: -1 };
+
+function hideTiles(tiles: readonly Tile[]): Tile[] {
+  return tiles.map(() => ({ ...HIDDEN_TILE }));
+}
+
+export function getVisibleGameState(
+  state: GameState,
+  playerId: string
+): GameState {
+  const players = Object.fromEntries(
+    Object.entries(state.players).map(([id, player]) => [
+      id,
+      {
+        ...player,
+        hand: id === playerId ? player.hand : hideTiles(player.hand),
+      },
+    ])
+  ) as GameState["players"];
+
+  return {
+    ...state,
+    players,
+    boneyard: hideTiles(state.boneyard),
+    deadTiles: hideTiles(state.deadTiles),
+  };
+}
 
 function makeCode(len = 5): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

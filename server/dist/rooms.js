@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getVisibleGameState = getVisibleGameState;
 exports.createRoom = createRoom;
 exports.joinRoom = joinRoom;
 exports.getRoom = getRoom;
@@ -11,6 +12,25 @@ exports.getRoomCanDraw = getRoomCanDraw;
 exports.getRoomOpenEnds = getRoomOpenEnds;
 const engine_1 = require("./game/engine");
 const rooms = new Map();
+const HIDDEN_TILE = { high: -1, low: -1 };
+function hideTiles(tiles) {
+    return tiles.map(() => ({ ...HIDDEN_TILE }));
+}
+function getVisibleGameState(state, playerId) {
+    const players = Object.fromEntries(Object.entries(state.players).map(([id, player]) => [
+        id,
+        {
+            ...player,
+            hand: id === playerId ? player.hand : hideTiles(player.hand),
+        },
+    ]));
+    return {
+        ...state,
+        players,
+        boneyard: hideTiles(state.boneyard),
+        deadTiles: hideTiles(state.deadTiles),
+    };
+}
 function makeCode(len = 5) {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let s = "";
