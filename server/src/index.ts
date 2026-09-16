@@ -10,6 +10,7 @@ import {
   act,
   nextHand,
   getRoom,
+  getVisibleGameState,
   getRoomLegalMoves,
   getRoomCanDraw,
 } from "./rooms";
@@ -57,7 +58,7 @@ function broadcastStateUpdate(roomCode: string) {
       );
 
       socket.emit("state:update", {
-        state: room.state,
+        state: getVisibleGameState(room.state, socketId),
         legalMoves,
         canDraw,
       });
@@ -90,7 +91,13 @@ io.on("connection", (socket: Socket) => {
       socket.join(room.code);
       io.to(room.code).emit("room:update", { players: room.players });
       console.log(`[room:join] joined room=${room.code}, players=${room.players.length}`);
-      cb({ ok: true, roomCode: room.code, you: socket.id, players: room.players, state: room.state });
+      cb({
+        ok: true,
+        roomCode: room.code,
+        you: socket.id,
+        players: room.players,
+        state: room.state ? getVisibleGameState(room.state, socket.id) : null,
+      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";
       console.log(`[room:join] ERROR: ${message}`);
