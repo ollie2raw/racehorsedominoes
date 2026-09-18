@@ -95,7 +95,13 @@ function isGoingOutIllegal(
   return false;
 }
 
+const MAX_SAFE_MAX_PIPS = 12;
+
 function validateConfig(playerCount: number, cfg: Config): void {
+  if (!Number.isInteger(cfg.maxPips) || cfg.maxPips < 0 || cfg.maxPips > MAX_SAFE_MAX_PIPS) {
+    throw new Error(`Config invalid: maxPips must be an integer between 0 and ${MAX_SAFE_MAX_PIPS}.`);
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
