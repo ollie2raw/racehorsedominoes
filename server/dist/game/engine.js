@@ -11,6 +11,10 @@ exports.applyMove = applyMove;
 const types_1 = require("./types");
 const scoring_1 = require("./scoring");
 // ─── Internal helpers ─────────────────────────────────────
+const MAX_SAFE_MAX_PIPS = 12;
+const MAX_SAFE_TILES_PER_PLAYER = 20;
+const MAX_SAFE_SCORING_MULTIPLE = 20;
+const MAX_SAFE_WINNING_SCORE = 10000;
 function generateFullSet(maxPips) {
     const tiles = [];
     for (let high = 0; high <= maxPips; high++) {
@@ -83,12 +87,28 @@ function isGoingOutIllegal(state, playerId, tile, position) {
     return (0, scoring_1.computePlayScore)(simBoard, state.config) > 0;
 }
 function validateConfig(playerCount, cfg) {
+    assertIntegerInRange('maxPips', cfg.maxPips, 0, MAX_SAFE_MAX_PIPS);
+    assertIntegerInRange('tilesPerPlayer', cfg.tilesPerPlayer, 1, MAX_SAFE_TILES_PER_PLAYER);
+    assertIntegerInRange('deadTileCount', cfg.deadTileCount, 0, (0, types_1.totalTilesInSet)(cfg.maxPips));
+    assertIntegerInRange('scoringMultiple', cfg.scoringMultiple, 1, MAX_SAFE_SCORING_MULTIPLE);
+    assertIntegerInRange('winningScore', cfg.winningScore, 1, MAX_SAFE_WINNING_SCORE);
+    if (cfg.blockedHandRule !== 'lowestPips' && cfg.blockedHandRule !== 'noScore') {
+        throw new Error('Invalid blockedHandRule.');
+    }
+    if (cfg.endHandBonus !== 'sumOpponentPenalties' && cfg.endHandBonus !== 'none') {
+        throw new Error('Invalid endHandBonus.');
+    }
     const total = (0, types_1.totalTilesInSet)(cfg.maxPips);
     const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
     if (needed > total) {
         throw new Error(`Config impossible: ${playerCount} players × ${cfg.tilesPerPlayer} tiles + ` +
             `${cfg.deadTileCount} dead tiles = ${needed}, but a double-${cfg.maxPips} ` +
             `set only has ${total} tiles.`);
+    }
+}
+function assertIntegerInRange(name, value, min, max) {
+    if (!Number.isInteger(value) || value < min || value > max) {
+        throw new Error(`${name} must be an integer between ${min} and ${max}.`);
     }
 }
 // ─── Blocked hand resolution ──────────────────────────────
