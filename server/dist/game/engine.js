@@ -82,7 +82,23 @@ function isGoingOutIllegal(state, playerId, tile, position) {
     const simBoard = (0, scoring_1.simulatePlacement)(state.board, tile, position);
     return (0, scoring_1.computePlayScore)(simBoard, state.config) > 0;
 }
+function assertIntegerInRange(name, value, min, max) {
+    if (!Number.isInteger(value) || value < min || value > max) {
+        throw new Error(`Invalid config: ${name} must be an integer between ${min} and ${max}.`);
+    }
+}
 function validateConfig(playerCount, cfg) {
+    assertIntegerInRange('maxPips', cfg.maxPips, 0, 12);
+    assertIntegerInRange('tilesPerPlayer', cfg.tilesPerPlayer, 1, 20);
+    assertIntegerInRange('deadTileCount', cfg.deadTileCount, 0, (0, types_1.totalTilesInSet)(cfg.maxPips));
+    assertIntegerInRange('scoringMultiple', cfg.scoringMultiple, 1, 100);
+    assertIntegerInRange('winningScore', cfg.winningScore, 1, 10000);
+    if (cfg.blockedHandRule !== 'lowestPips' && cfg.blockedHandRule !== 'noScore') {
+        throw new Error('Invalid config: blockedHandRule must be lowestPips or noScore.');
+    }
+    if (cfg.endHandBonus !== 'sumOpponentPenalties' && cfg.endHandBonus !== 'none') {
+        throw new Error('Invalid config: endHandBonus must be sumOpponentPenalties or none.');
+    }
     const total = (0, types_1.totalTilesInSet)(cfg.maxPips);
     const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
     if (needed > total) {
