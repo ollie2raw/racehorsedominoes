@@ -96,6 +96,28 @@ function isGoingOutIllegal(
 }
 
 function validateConfig(playerCount: number, cfg: Config): void {
+  if (!Number.isInteger(cfg.maxPips) || cfg.maxPips < 0 || cfg.maxPips > 12) {
+    throw new Error('Config invalid: maxPips must be an integer between 0 and 12.');
+  }
+  if (!Number.isInteger(cfg.tilesPerPlayer) || cfg.tilesPerPlayer < 1) {
+    throw new Error('Config invalid: tilesPerPlayer must be a positive integer.');
+  }
+  if (!Number.isInteger(cfg.deadTileCount) || cfg.deadTileCount < 0) {
+    throw new Error('Config invalid: deadTileCount must be a non-negative integer.');
+  }
+  if (!Number.isInteger(cfg.scoringMultiple) || cfg.scoringMultiple < 1) {
+    throw new Error('Config invalid: scoringMultiple must be a positive integer.');
+  }
+  if (!Number.isFinite(cfg.winningScore) || cfg.winningScore < 1) {
+    throw new Error('Config invalid: winningScore must be positive.');
+  }
+  if (cfg.blockedHandRule !== 'lowestPips' && cfg.blockedHandRule !== 'noScore') {
+    throw new Error('Config invalid: blockedHandRule is not supported.');
+  }
+  if (cfg.endHandBonus !== 'sumOpponentPenalties' && cfg.endHandBonus !== 'none') {
+    throw new Error('Config invalid: endHandBonus is not supported.');
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
