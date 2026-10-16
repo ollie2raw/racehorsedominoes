@@ -66,13 +66,7 @@ io.on("connection", (socket) => {
             socket.join(room.code);
             io.to(room.code).emit("room:update", { players: room.players });
             console.log(`[room:join] joined room=${room.code}, players=${room.players.length}`);
-            cb({
-                ok: true,
-                roomCode: room.code,
-                you: socket.id,
-                players: room.players,
-                state: room.state ? (0, rooms_1.getVisibleGameState)(room.state, socket.id) : null,
-            });
+            cb((0, rooms_1.getRoomJoinResponse)(room, socket.id));
         }
         catch (err) {
             const message = err instanceof Error ? err.message : "unknown error";

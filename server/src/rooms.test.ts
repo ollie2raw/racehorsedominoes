@@ -5,6 +5,7 @@ import {
   nextHand,
   startGame,
   act,
+  getRoomJoinResponse,
   getRoomStateUpdate,
   getVisibleGameState,
 } from "./rooms";
@@ -112,5 +113,32 @@ describe("visible room state", () => {
     expect(update.state.players[room.players[1]].hand).toEqual([{ high: -1, low: -1 }]);
     expect(update.state.boneyard).toEqual([{ high: -1, low: -1 }]);
     expect(update.state.deadTiles).toEqual([{ high: -1, low: -1 }]);
+  });
+
+  it("builds join responses with masked private state", () => {
+    const room = makeStartedRoom();
+    const state = createInitialState(room.players) as GameState;
+    room.state = {
+      ...state,
+      players: {
+        [room.players[0]]: { id: room.players[0], hand: [t(1, 2)], score: 0 },
+        [room.players[1]]: { id: room.players[1], hand: [t(3, 4)], score: 0 },
+      },
+      boneyard: [t(0, 0)],
+      deadTiles: [t(6, 6)],
+    };
+
+    const response = getRoomJoinResponse(room, room.players[1]);
+
+    expect(response).toMatchObject({
+      ok: true,
+      roomCode: room.code,
+      you: room.players[1],
+      players: room.players,
+    });
+    expect(response.state?.players[room.players[0]].hand).toEqual([{ high: -1, low: -1 }]);
+    expect(response.state?.players[room.players[1]].hand).toEqual([t(3, 4)]);
+    expect(response.state?.boneyard).toEqual([{ high: -1, low: -1 }]);
+    expect(response.state?.deadTiles).toEqual([{ high: -1, low: -1 }]);
   });
 });

@@ -114,6 +114,16 @@ export function getRoomStateUpdate(code: string, viewerSocketId: string) {
   };
 }
 
+export function getRoomJoinResponse(room: Room, viewerSocketId: string) {
+  return {
+    ok: true,
+    roomCode: room.code,
+    you: viewerSocketId,
+    players: room.players,
+    state: room.state ? getVisibleGameState(room.state, viewerSocketId) : null,
+  };
+}
+
 export function startGame(code: string, socketId: string): Room {
   const room = getRoom(code);
   assertRoomPlayer(room, socketId);

@@ -5,6 +5,7 @@ exports.joinRoom = joinRoom;
 exports.getRoom = getRoom;
 exports.getVisibleGameState = getVisibleGameState;
 exports.getRoomStateUpdate = getRoomStateUpdate;
+exports.getRoomJoinResponse = getRoomJoinResponse;
 exports.startGame = startGame;
 exports.nextHand = nextHand;
 exports.act = act;
@@ -89,6 +90,15 @@ function getRoomStateUpdate(code, viewerSocketId) {
         state: getVisibleGameState(room.state, viewerSocketId),
         legalMoves: getRoomLegalMoves(code, viewerSocketId),
         canDraw: getRoomCanDraw(code, viewerSocketId),
+    };
+}
+function getRoomJoinResponse(room, viewerSocketId) {
+    return {
+        ok: true,
+        roomCode: room.code,
+        you: viewerSocketId,
+        players: room.players,
+        state: room.state ? getVisibleGameState(room.state, viewerSocketId) : null,
     };
 }
 function startGame(code, socketId) {
