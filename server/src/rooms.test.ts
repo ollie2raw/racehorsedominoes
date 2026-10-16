@@ -4,6 +4,8 @@ import {
   joinRoom,
   nextHand,
   startGame,
+  act,
+  getRoomStateUpdate,
   getVisibleGameState,
 } from "./rooms";
 import { createInitialState } from "./game/engine";
@@ -32,6 +34,15 @@ describe("room lifecycle security", () => {
     room.state = { ...room.state!, handOver: true, gameOver: false };
 
     expect(() => nextHand(room.code, "intruder")).toThrow(/not.*player/i);
+  });
+
+  it("rejects game actions from sockets that are not seated in the room", () => {
+    const room = makeStartedRoom();
+    startGame(room.code, room.players[0]);
+    const before = room.state;
+
+    expect(() => act(room.code, "intruder", { type: "DRAW" })).toThrow(/not.*player/i);
+    expect(room.state).toBe(before);
   });
 
   it("does not allow game:start to wipe scores between hands", () => {
@@ -80,5 +91,26 @@ describe("visible room state", () => {
       { high: -1, low: -1 },
     ]);
     expect(visible.deadTiles).toEqual([{ high: -1, low: -1 }]);
+  });
+
+  it("builds state-update payloads with masked private state", () => {
+    const room = makeStartedRoom();
+    const state = createInitialState(room.players) as GameState;
+    room.state = {
+      ...state,
+      players: {
+        [room.players[0]]: { id: room.players[0], hand: [t(1, 2)], score: 0 },
+        [room.players[1]]: { id: room.players[1], hand: [t(3, 4)], score: 0 },
+      },
+      boneyard: [t(0, 0)],
+      deadTiles: [t(6, 6)],
+    };
+
+    const update = getRoomStateUpdate(room.code, room.players[0]);
+
+    expect(update.state.players[room.players[0]].hand).toEqual([t(1, 2)]);
+    expect(update.state.players[room.players[1]].hand).toEqual([{ high: -1, low: -1 }]);
+    expect(update.state.boneyard).toEqual([{ high: -1, low: -1 }]);
+    expect(update.state.deadTiles).toEqual([{ high: -1, low: -1 }]);
   });
 });

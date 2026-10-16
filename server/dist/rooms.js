@@ -4,6 +4,7 @@ exports.createRoom = createRoom;
 exports.joinRoom = joinRoom;
 exports.getRoom = getRoom;
 exports.getVisibleGameState = getVisibleGameState;
+exports.getRoomStateUpdate = getRoomStateUpdate;
 exports.startGame = startGame;
 exports.nextHand = nextHand;
 exports.act = act;
@@ -78,6 +79,16 @@ function getVisibleGameState(state, viewerSocketId) {
         players,
         boneyard: hiddenTiles(state.boneyard.length),
         deadTiles: hiddenTiles(state.deadTiles.length),
+    };
+}
+function getRoomStateUpdate(code, viewerSocketId) {
+    const room = getRoom(code);
+    if (!room.state)
+        throw new Error("Game not started.");
+    return {
+        state: getVisibleGameState(room.state, viewerSocketId),
+        legalMoves: getRoomLegalMoves(code, viewerSocketId),
+        canDraw: getRoomCanDraw(code, viewerSocketId),
     };
 }
 function startGame(code, socketId) {

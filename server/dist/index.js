@@ -34,16 +34,11 @@ function broadcastStateUpdate(roomCode) {
     for (const socketId of sockets) {
         const socket = io.sockets.sockets.get(socketId);
         if (socket) {
-            const legalMoves = (0, rooms_1.getRoomLegalMoves)(roomCode, socketId);
-            const canDraw = (0, rooms_1.getRoomCanDraw)(roomCode, socketId);
+            const update = (0, rooms_1.getRoomStateUpdate)(roomCode, socketId);
             // DEBUG: Log legal moves info
-            const branchMoves = legalMoves.filter((m) => m.type === "play" && m.position?.startsWith("branch-"));
-            console.log(`[DEBUG broadcastStateUpdate] socket=${socketId}, legalMoves=${legalMoves.length}, branchMoves=${branchMoves.length}`, branchMoves.length > 0 ? branchMoves.map((m) => m.position) : "");
-            socket.emit("state:update", {
-                state: (0, rooms_1.getVisibleGameState)(room.state, socketId),
-                legalMoves,
-                canDraw,
-            });
+            const branchMoves = update.legalMoves.filter((m) => m.type === "play" && m.position?.startsWith("branch-"));
+            console.log(`[DEBUG broadcastStateUpdate] socket=${socketId}, legalMoves=${update.legalMoves.length}, branchMoves=${branchMoves.length}`, branchMoves.length > 0 ? branchMoves.map((m) => m.position) : "");
+            socket.emit("state:update", update);
         }
     }
 }

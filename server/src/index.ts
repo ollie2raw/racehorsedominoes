@@ -10,8 +10,7 @@ import {
   act,
   nextHand,
   getRoom,
-  getRoomLegalMoves,
-  getRoomCanDraw,
+  getRoomStateUpdate,
   getVisibleGameState,
 } from "./rooms";
 
@@ -45,23 +44,18 @@ function broadcastStateUpdate(roomCode: string) {
   for (const socketId of sockets) {
     const socket = io.sockets.sockets.get(socketId);
     if (socket) {
-      const legalMoves = getRoomLegalMoves(roomCode, socketId);
-      const canDraw = getRoomCanDraw(roomCode, socketId);
+      const update = getRoomStateUpdate(roomCode, socketId);
 
       // DEBUG: Log legal moves info
-      const branchMoves = legalMoves.filter(
+      const branchMoves = update.legalMoves.filter(
         (m: any) => m.type === "play" && m.position?.startsWith("branch-")
       );
       console.log(
-        `[DEBUG broadcastStateUpdate] socket=${socketId}, legalMoves=${legalMoves.length}, branchMoves=${branchMoves.length}`,
+        `[DEBUG broadcastStateUpdate] socket=${socketId}, legalMoves=${update.legalMoves.length}, branchMoves=${branchMoves.length}`,
         branchMoves.length > 0 ? branchMoves.map((m: any) => m.position) : ""
       );
 
-      socket.emit("state:update", {
-        state: getVisibleGameState(room.state, socketId),
-        legalMoves,
-        canDraw,
-      });
+      socket.emit("state:update", update);
     }
   }
 }

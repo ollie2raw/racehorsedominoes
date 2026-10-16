@@ -103,6 +103,17 @@ export function getVisibleGameState(state: GameState, viewerSocketId: string): G
   };
 }
 
+export function getRoomStateUpdate(code: string, viewerSocketId: string) {
+  const room = getRoom(code);
+  if (!room.state) throw new Error("Game not started.");
+
+  return {
+    state: getVisibleGameState(room.state, viewerSocketId),
+    legalMoves: getRoomLegalMoves(code, viewerSocketId),
+    canDraw: getRoomCanDraw(code, viewerSocketId),
+  };
+}
+
 export function startGame(code: string, socketId: string): Room {
   const room = getRoom(code);
   assertRoomPlayer(room, socketId);
