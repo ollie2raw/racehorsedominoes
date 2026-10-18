@@ -38,6 +38,10 @@ function setupState(overrides: Partial<GameState> & { board?: BoardState | null 
 
 describe("Racehorse Engine Core Rules", () => {
 
+  it("rejects oversized maxPips before tile generation", () => {
+    expect(() => createInitialState(["A", "B"], { maxPips: 1_000_000 })).toThrow(/maxPips/i);
+  });
+
   it("deals 7 tiles each and keeps exactly 2 dead tiles", () => {
     let state = createInitialState(["A", "B"], {
       tilesPerPlayer: 7,
