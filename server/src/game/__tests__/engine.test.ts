@@ -213,6 +213,21 @@ describe("Racehorse Engine Core Rules", () => {
 
 });
 
+describe("Config validation", () => {
+  it("rejects huge tile sets before hand generation can exhaust the server", () => {
+    expect(() => createInitialState(["A", "B"], { maxPips: 100_000 })).toThrow("maxPips");
+  });
+
+  it("rejects invalid numeric and enum config values from untrusted clients", () => {
+    expect(() => createInitialState(["A", "B"], { tilesPerPlayer: 0 })).toThrow("tilesPerPlayer");
+    expect(() => createInitialState(["A", "B"], { deadTileCount: -1 })).toThrow("deadTileCount");
+    expect(() => createInitialState(["A", "B"], { scoringMultiple: 0 })).toThrow("scoringMultiple");
+    expect(() => createInitialState(["A", "B"], { winningScore: 0 })).toThrow("winningScore");
+    expect(() => createInitialState(["A", "B"], { blockedHandRule: "draw" as any })).toThrow("blockedHandRule");
+    expect(() => createInitialState(["A", "B"], { endHandBonus: "allTiles" as any })).toThrow("endHandBonus");
+  });
+});
+
 describe("Scoring: Points = sum/5", () => {
 
   it("scores 1 point when sum is 5", () => {
