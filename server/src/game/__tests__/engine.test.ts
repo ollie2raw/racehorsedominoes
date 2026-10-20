@@ -59,6 +59,20 @@ describe("Racehorse Engine Core Rules", () => {
     expect(total).toBe(28);
   });
 
+  it("rejects unsafe or invalid game configuration before dealing tiles", () => {
+    expect(() =>
+      createInitialState(["A", "B"], { maxPips: 1000000 })
+    ).toThrow(/maxPips/i);
+
+    expect(() =>
+      createInitialState(["A", "B"], { tilesPerPlayer: -1 })
+    ).toThrow(/tilesPerPlayer/i);
+
+    expect(() =>
+      createInitialState(["A", "B"], { blockedHandRule: "surprise" as any })
+    ).toThrow(/blockedHandRule/i);
+  });
+
   it("last-tile double is legal and forces draw when boneyard has tiles", () => {
     const state = setupState({
       board: {
