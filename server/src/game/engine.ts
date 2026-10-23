@@ -95,7 +95,66 @@ function isGoingOutIllegal(
   return false;
 }
 
+const MAX_MAX_PIPS = 12;
+const MAX_TILES_PER_PLAYER = 50;
+const MAX_DEAD_TILE_COUNT = 200;
+const MAX_SCORING_MULTIPLE = 100;
+const MAX_WINNING_SCORE = 100000;
+
+function assertIntegerInRange(
+  name: string,
+  value: unknown,
+  min: number,
+  max: number
+): void {
+  if (
+    !Number.isSafeInteger(value) ||
+    (value as number) < min ||
+    (value as number) > max
+  ) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  }
+}
+
+function assertOneOf<T extends string>(
+  name: string,
+  value: unknown,
+  allowed: readonly T[]
+): void {
+  if (!allowed.includes(value as T)) {
+    throw new Error(`${name} must be one of: ${allowed.join(", ")}.`);
+  }
+}
+
 function validateConfig(playerCount: number, cfg: Config): void {
+  assertIntegerInRange('maxPips', cfg.maxPips, 0, MAX_MAX_PIPS);
+  assertIntegerInRange(
+    'tilesPerPlayer',
+    cfg.tilesPerPlayer,
+    1,
+    MAX_TILES_PER_PLAYER
+  );
+  assertIntegerInRange(
+    'deadTileCount',
+    cfg.deadTileCount,
+    0,
+    MAX_DEAD_TILE_COUNT
+  );
+  assertIntegerInRange(
+    'scoringMultiple',
+    cfg.scoringMultiple,
+    1,
+    MAX_SCORING_MULTIPLE
+  );
+  assertIntegerInRange(
+    'winningScore',
+    cfg.winningScore,
+    1,
+    MAX_WINNING_SCORE
+  );
+  assertOneOf('blockedHandRule', cfg.blockedHandRule, ['lowestPips', 'noScore']);
+  assertOneOf('endHandBonus', cfg.endHandBonus, ['sumOpponentPenalties', 'none']);
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
