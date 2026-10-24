@@ -12,7 +12,9 @@ import {
   getRoom,
   getRoomLegalMoves,
   getRoomCanDraw,
+  getVisibleGameState,
 } from "./rooms";
+import { normalizeAck } from "./socketAck";
 
 const app = express();
 app.use(cors());
@@ -57,7 +59,7 @@ function broadcastStateUpdate(roomCode: string) {
       );
 
       socket.emit("state:update", {
-        state: room.state,
+        state: getVisibleGameState(room.state, socketId),
         legalMoves,
         canDraw,
       });
@@ -69,20 +71,22 @@ io.on("connection", (socket: Socket) => {
   console.log("Client connected:", socket.id);
 
   socket.on("room:create", (config, cb) => {
+    const ack = normalizeAck(cb);
     console.log(`[room:create] socket=${socket.id}`);
     try {
       const room = createRoom(socket.id, config ?? {});
       socket.join(room.code);
       console.log(`[room:create] created room=${room.code}, players=${room.players.length}`);
-      cb({ ok: true, roomCode: room.code, you: socket.id, players: room.players });
+      ack({ ok: true, roomCode: room.code, you: socket.id, players: room.players });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";
       console.log(`[room:create] ERROR: ${message}`);
-      cb({ ok: false, error: message });
+      ack({ ok: false, error: message });
     }
   });
 
   socket.on("room:join", (code, cb) => {
+    const ack = normalizeAck(cb);
     const roomCode = String(code).trim().toUpperCase();
     console.log(`[room:join] socket=${socket.id}, code=${roomCode}`);
     try {
@@ -90,55 +94,64 @@ io.on("connection", (socket: Socket) => {
       socket.join(room.code);
       io.to(room.code).emit("room:update", { players: room.players });
       console.log(`[room:join] joined room=${room.code}, players=${room.players.length}`);
-      cb({ ok: true, roomCode: room.code, you: socket.id, players: room.players, state: room.state });
+      ack({
+        ok: true,
+        roomCode: room.code,
+        you: socket.id,
+        players: room.players,
+        state: room.state ? getVisibleGameState(room.state, socket.id) : null,
+      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";
       console.log(`[room:join] ERROR: ${message}`);
-      cb({ ok: false, error: message });
+      ack({ ok: false, error: message });
     }
   });
 
   socket.on("game:start", (code, cb) => {
+    const ack = normalizeAck(cb);
     const roomCode = String(code).trim().toUpperCase();
     console.log(`[game:start] socket=${socket.id}, code=${roomCode}`);
     try {
-      const room = startGame(roomCode);
+      const room = startGame(roomCode, socket.id);
       console.log(`[game:start] game started, handNumber=${room.state?.handNumber}, handOver=${room.state?.handOver}`);
       broadcastStateUpdate(room.code);
-      cb({ ok: true });
+      ack({ ok: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";
       console.log(`[game:start] ERROR: ${message}`);
-      cb({ ok: false, error: message });
+      ack({ ok: false, error: message });
     }
   });
 
   socket.on("game:action", (code, action, cb) => {
+    const ack = normalizeAck(cb);
     const roomCode = String(code).trim().toUpperCase();
     console.log(`[game:action] socket=${socket.id}, code=${roomCode}, action=${action?.type}`);
     try {
       const room = act(roomCode, socket.id, action);
       broadcastStateUpdate(room.code);
-      cb({ ok: true });
+      ack({ ok: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";
       console.log(`[game:action] ERROR: ${message}`);
-      cb({ ok: false, error: message });
+      ack({ ok: false, error: message });
     }
   });
 
   socket.on("hand:next", (code, cb) => {
+    const ack = normalizeAck(cb);
     const roomCode = String(code).trim().toUpperCase();
     console.log(`[hand:next] socket=${socket.id}, code=${roomCode}`);
     try {
-      const room = nextHand(roomCode);
+      const room = nextHand(roomCode, socket.id);
       console.log(`[hand:next] new hand started, handNumber=${room.state?.handNumber}`);
       broadcastStateUpdate(room.code);
-      cb({ ok: true });
+      ack({ ok: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";
       console.log(`[hand:next] ERROR: ${message}`);
-      cb({ ok: false, error: message });
+      ack({ ok: false, error: message });
     }
   });
 
