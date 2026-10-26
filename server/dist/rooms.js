@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createRoom = createRoom;
 exports.joinRoom = joinRoom;
 exports.getRoom = getRoom;
+exports.getVisibleGameState = getVisibleGameState;
 exports.startGame = startGame;
 exports.nextHand = nextHand;
 exports.act = act;
@@ -50,18 +51,40 @@ function getRoom(code) {
         throw new Error("Room not found.");
     return room;
 }
-function startGame(code) {
+function assertRoomPlayer(room, socketId) {
+    if (!room.players.includes(socketId)) {
+        throw new Error("Socket is not a player in this room.");
+    }
+}
+const hiddenTile = () => ({ high: -1, low: -1 });
+function hiddenTiles(count) {
+    return Array.from({ length: count }, hiddenTile);
+}
+function getVisibleGameState(state, viewerId) {
+    const players = Object.fromEntries(Object.entries(state.players).map(([id, player]) => [
+        id,
+        {
+            ...player,
+            hand: id === viewerId ? player.hand : hiddenTiles(player.hand.length),
+        },
+    ]));
+    return {
+        ...state,
+        players,
+        boneyard: hiddenTiles(state.boneyard.length),
+        deadTiles: hiddenTiles(state.deadTiles.length),
+    };
+}
+function startGame(code, socketId) {
     const room = getRoom(code);
+    assertRoomPlayer(room, socketId);
     if (room.players.length !== 2) {
         throw new Error("Need exactly 2 players to start.");
     }
-    // Defensive: If game is in a stale state (handOver but not gameOver), allow restart
-    // This handles edge cases where the room got stuck
-    if (room.state && !room.state.gameOver && !room.state.handOver) {
-        // Game is actively in progress - don't allow restart
-        throw new Error("Game is already in progress.");
+    if (room.state && !room.state.gameOver) {
+        throw new Error("Game is already started.");
     }
-    // Create fresh game state (either first start or restart after stale state)
+    // Create fresh game state for the first game or an explicit rematch after game over.
     const state0 = (0, engine_1.createInitialState)(room.players, room.config);
     const state1 = (0, engine_1.startNewHand)(state0);
     // Auto-draw for starting player until they can open
@@ -70,8 +93,9 @@ function startGame(code) {
     room.state = state2;
     return room;
 }
-function nextHand(code) {
+function nextHand(code, socketId) {
     const room = getRoom(code);
+    assertRoomPlayer(room, socketId);
     if (!room.state)
         throw new Error("Game not started.");
     if (!room.state.handOver) {
@@ -90,6 +114,7 @@ function nextHand(code) {
 }
 function act(code, socketId, action) {
     const room = getRoom(code);
+    assertRoomPlayer(room, socketId);
     if (!room.state)
         throw new Error("Game not started.");
     let state = room.state;
