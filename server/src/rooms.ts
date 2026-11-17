@@ -67,21 +67,47 @@ export function getRoom(code: string): Room {
   return room;
 }
 
-export function startGame(code: string): Room {
+function requireRoomPlayer(room: Room, socketId: string): void {
+  if (!room.players.includes(socketId)) {
+    throw new Error("Socket is not a player in this room.");
+  }
+}
+
+function maskTiles<T extends readonly unknown[]>(tiles: T) {
+  return tiles.map(() => ({ high: -1, low: -1 }));
+}
+
+export function getVisibleGameState(state: GameState, playerId: string): GameState {
+  const visiblePlayers: GameState["players"] = Object.fromEntries(
+    state.playerIds.map(id => [
+      id,
+      {
+        ...state.players[id],
+        hand: id === playerId ? state.players[id].hand : maskTiles(state.players[id].hand),
+      },
+    ])
+  );
+
+  return {
+    ...state,
+    players: visiblePlayers,
+    boneyard: maskTiles(state.boneyard),
+    deadTiles: maskTiles(state.deadTiles),
+  };
+}
+
+export function startGame(code: string, socketId: string): Room {
   const room = getRoom(code);
+  requireRoomPlayer(room, socketId);
 
   if (room.players.length !== 2) {
     throw new Error("Need exactly 2 players to start.");
   }
 
-  // Defensive: If game is in a stale state (handOver but not gameOver), allow restart
-  // This handles edge cases where the room got stuck
-  if (room.state && !room.state.gameOver && !room.state.handOver) {
-    // Game is actively in progress - don't allow restart
+  if (room.state && !room.state.gameOver) {
     throw new Error("Game is already in progress.");
   }
 
-  // Create fresh game state (either first start or restart after stale state)
   const state0 = createInitialState(room.players, room.config);
   const state1 = startNewHand(state0);
 
@@ -96,8 +122,9 @@ export function startGame(code: string): Room {
   return room;
 }
 
-export function nextHand(code: string): Room {
+export function nextHand(code: string, socketId: string): Room {
   const room = getRoom(code);
+  requireRoomPlayer(room, socketId);
   if (!room.state) throw new Error("Game not started.");
 
   if (!room.state.handOver) {
@@ -134,6 +161,7 @@ export function act(
   action: ActionPayload
 ): Room {
   const room = getRoom(code);
+  requireRoomPlayer(room, socketId);
   if (!room.state) throw new Error("Game not started.");
 
   let state = room.state;

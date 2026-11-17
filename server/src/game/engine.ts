@@ -27,6 +27,12 @@ import {
 
 // ─── Internal helpers ─────────────────────────────────────
 
+const MAX_CONFIG_PIPS = 12;
+const MAX_TILES_PER_PLAYER = 20;
+const MAX_DEAD_TILES = 100;
+const MAX_SCORING_MULTIPLE = 100;
+const MAX_WINNING_SCORE = 10000;
+
 function generateFullSet(maxPips: number): Tile[] {
   const tiles: Tile[] = [];
   for (let high = 0; high <= maxPips; high++) {
@@ -96,6 +102,28 @@ function isGoingOutIllegal(
 }
 
 function validateConfig(playerCount: number, cfg: Config): void {
+  if (!Number.isInteger(cfg.maxPips) || cfg.maxPips < 0 || cfg.maxPips > MAX_CONFIG_PIPS) {
+    throw new Error(`Config invalid: maxPips must be an integer between 0 and ${MAX_CONFIG_PIPS}.`);
+  }
+  if (!Number.isInteger(cfg.tilesPerPlayer) || cfg.tilesPerPlayer < 1 || cfg.tilesPerPlayer > MAX_TILES_PER_PLAYER) {
+    throw new Error(`Config invalid: tilesPerPlayer must be an integer between 1 and ${MAX_TILES_PER_PLAYER}.`);
+  }
+  if (!Number.isInteger(cfg.deadTileCount) || cfg.deadTileCount < 0 || cfg.deadTileCount > MAX_DEAD_TILES) {
+    throw new Error(`Config invalid: deadTileCount must be an integer between 0 and ${MAX_DEAD_TILES}.`);
+  }
+  if (!Number.isInteger(cfg.scoringMultiple) || cfg.scoringMultiple < 1 || cfg.scoringMultiple > MAX_SCORING_MULTIPLE) {
+    throw new Error(`Config invalid: scoringMultiple must be an integer between 1 and ${MAX_SCORING_MULTIPLE}.`);
+  }
+  if (!Number.isInteger(cfg.winningScore) || cfg.winningScore < 1 || cfg.winningScore > MAX_WINNING_SCORE) {
+    throw new Error(`Config invalid: winningScore must be an integer between 1 and ${MAX_WINNING_SCORE}.`);
+  }
+  if (cfg.blockedHandRule !== 'lowestPips' && cfg.blockedHandRule !== 'noScore') {
+    throw new Error('Config invalid: blockedHandRule must be "lowestPips" or "noScore".');
+  }
+  if (cfg.endHandBonus !== 'sumOpponentPenalties' && cfg.endHandBonus !== 'none') {
+    throw new Error('Config invalid: endHandBonus must be "sumOpponentPenalties" or "none".');
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
