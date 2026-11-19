@@ -1452,3 +1452,17 @@ describe("canDraw function", () => {
   });
 
 });
+
+describe("config validation", () => {
+  it("rejects maxPips values large enough to exhaust hand generation", () => {
+    expect(() =>
+      createInitialState(["A", "B"], { maxPips: Number.MAX_SAFE_INTEGER })
+    ).toThrow(/maxPips/i);
+  });
+
+  it("rejects malformed enum values before they reach gameplay logic", () => {
+    expect(() =>
+      createInitialState(["A", "B"], { blockedHandRule: "highestPips" as never })
+    ).toThrow(/blockedHandRule/i);
+  });
+});

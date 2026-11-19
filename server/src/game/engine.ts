@@ -27,6 +27,11 @@ import {
 
 // ─── Internal helpers ─────────────────────────────────────
 
+const MAX_ALLOWED_PIPS = 12;
+const MAX_TILES_PER_PLAYER = 50;
+const MAX_SCORING_MULTIPLE = 100;
+const MAX_WINNING_SCORE = 10000;
+
 function generateFullSet(maxPips: number): Tile[] {
   const tiles: Tile[] = [];
   for (let high = 0; high <= maxPips; high++) {
@@ -96,6 +101,20 @@ function isGoingOutIllegal(
 }
 
 function validateConfig(playerCount: number, cfg: Config): void {
+  assertIntegerInRange('maxPips', cfg.maxPips, 0, MAX_ALLOWED_PIPS);
+  assertIntegerInRange('tilesPerPlayer', cfg.tilesPerPlayer, 1, MAX_TILES_PER_PLAYER);
+  assertIntegerInRange('deadTileCount', cfg.deadTileCount, 0, Number.MAX_SAFE_INTEGER);
+  assertIntegerInRange('scoringMultiple', cfg.scoringMultiple, 1, MAX_SCORING_MULTIPLE);
+  assertIntegerInRange('winningScore', cfg.winningScore, 1, MAX_WINNING_SCORE);
+
+  if (cfg.blockedHandRule !== 'lowestPips' && cfg.blockedHandRule !== 'noScore') {
+    throw new Error('blockedHandRule must be either lowestPips or noScore.');
+  }
+
+  if (cfg.endHandBonus !== 'sumOpponentPenalties' && cfg.endHandBonus !== 'none') {
+    throw new Error('endHandBonus must be either sumOpponentPenalties or none.');
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
@@ -104,6 +123,12 @@ function validateConfig(playerCount: number, cfg: Config): void {
       `${cfg.deadTileCount} dead tiles = ${needed}, but a double-${cfg.maxPips} ` +
       `set only has ${total} tiles.`
     );
+  }
+}
+
+function assertIntegerInRange(name: string, value: number, min: number, max: number): void {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}.`);
   }
 }
 
@@ -287,6 +312,7 @@ export function startNewHand(state: GameState): GameState {
   }
 
   const cfg = state.config;
+  validateConfig(state.playerIds.length, cfg);
   const handNumber = state.handNumber + 1;
   const allTiles = shuffle(generateFullSet(cfg.maxPips));
 
