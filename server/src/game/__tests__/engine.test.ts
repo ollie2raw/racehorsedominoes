@@ -1452,3 +1452,22 @@ describe("canDraw function", () => {
   });
 
 });
+
+describe("Config validation", () => {
+  it("rejects oversized maxPips before tile generation", () => {
+    expect(() => createInitialState(["A", "B"], { maxPips: 1000000 })).toThrow(/maxPips/i);
+  });
+
+  it("rejects non-finite and malformed config values", () => {
+    const invalidConfigs = [
+      { maxPips: Infinity },
+      { maxPips: NaN },
+      { tilesPerPlayer: "7" },
+      { blockedHandRule: "invalid" },
+    ];
+
+    for (const config of invalidConfigs) {
+      expect(() => createInitialState(["A", "B"], config as any)).toThrow();
+    }
+  });
+});

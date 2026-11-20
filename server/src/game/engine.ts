@@ -27,6 +27,8 @@ import {
 
 // ─── Internal helpers ─────────────────────────────────────
 
+const MAX_ALLOWED_PIPS = 12;
+
 function generateFullSet(maxPips: number): Tile[] {
   const tiles: Tile[] = [];
   for (let high = 0; high <= maxPips; high++) {
@@ -95,7 +97,31 @@ function isGoingOutIllegal(
   return false;
 }
 
+function assertIntegerInRange(
+  name: string,
+  value: unknown,
+  min: number,
+  max: number
+): asserts value is number {
+  if (!Number.isInteger(value) || (value as number) < min || (value as number) > max) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  }
+}
+
 function validateConfig(playerCount: number, cfg: Config): void {
+  assertIntegerInRange('maxPips', cfg.maxPips, 0, MAX_ALLOWED_PIPS);
+  assertIntegerInRange('tilesPerPlayer', cfg.tilesPerPlayer, 1, totalTilesInSet(cfg.maxPips));
+  assertIntegerInRange('deadTileCount', cfg.deadTileCount, 0, totalTilesInSet(cfg.maxPips));
+  assertIntegerInRange('scoringMultiple', cfg.scoringMultiple, 1, 100);
+  assertIntegerInRange('winningScore', cfg.winningScore, 1, 10000);
+
+  if (cfg.blockedHandRule !== 'lowestPips' && cfg.blockedHandRule !== 'noScore') {
+    throw new Error('blockedHandRule must be lowestPips or noScore.');
+  }
+  if (cfg.endHandBonus !== 'sumOpponentPenalties' && cfg.endHandBonus !== 'none') {
+    throw new Error('endHandBonus must be sumOpponentPenalties or none.');
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
