@@ -59,6 +59,16 @@ describe("Racehorse Engine Core Rules", () => {
     expect(total).toBe(28);
   });
 
+  it("rejects malicious config before tile generation", () => {
+    expect(() =>
+      createInitialState(["A", "B"], { maxPips: Number.MAX_SAFE_INTEGER })
+    ).toThrow("maxPips must be an integer between 0 and 12.");
+
+    expect(() =>
+      createInitialState(["A", "B"], { blockedHandRule: "wipeScores" as any })
+    ).toThrow("blockedHandRule must be one of: lowestPips, noScore.");
+  });
+
   it("last-tile double is legal and forces draw when boneyard has tiles", () => {
     const state = setupState({
       board: {

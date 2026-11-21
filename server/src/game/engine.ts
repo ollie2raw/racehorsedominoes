@@ -95,7 +95,36 @@ function isGoingOutIllegal(
   return false;
 }
 
+function assertIntegerInRange(
+  name: string,
+  value: unknown,
+  min: number,
+  max: number
+): asserts value is number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  }
+}
+
+function assertEnumValue<T extends string>(
+  name: string,
+  value: unknown,
+  allowed: readonly T[]
+): asserts value is T {
+  if (typeof value !== 'string' || !allowed.includes(value as T)) {
+    throw new Error(`${name} must be one of: ${allowed.join(', ')}.`);
+  }
+}
+
 function validateConfig(playerCount: number, cfg: Config): void {
+  assertIntegerInRange('maxPips', cfg.maxPips, 0, 12);
+  assertIntegerInRange('tilesPerPlayer', cfg.tilesPerPlayer, 1, 32);
+  assertIntegerInRange('deadTileCount', cfg.deadTileCount, 0, totalTilesInSet(cfg.maxPips));
+  assertIntegerInRange('scoringMultiple', cfg.scoringMultiple, 1, 100);
+  assertIntegerInRange('winningScore', cfg.winningScore, 1, 10000);
+  assertEnumValue('blockedHandRule', cfg.blockedHandRule, ['lowestPips', 'noScore']);
+  assertEnumValue('endHandBonus', cfg.endHandBonus, ['sumOpponentPenalties', 'none']);
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
