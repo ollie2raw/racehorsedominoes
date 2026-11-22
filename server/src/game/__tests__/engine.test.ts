@@ -213,6 +213,26 @@ describe("Racehorse Engine Core Rules", () => {
 
 });
 
+describe("Config validation", () => {
+  it("rejects oversized tile sets before generation", () => {
+    expect(() => createInitialState(["A", "B"], { maxPips: 1000000 })).toThrow(
+      "maxPips"
+    );
+  });
+
+  it("rejects scoring multiples that would corrupt score math", () => {
+    expect(() => createInitialState(["A", "B"], { scoringMultiple: 0 })).toThrow(
+      "scoringMultiple"
+    );
+  });
+
+  it("rejects unsupported enum values", () => {
+    expect(() =>
+      createInitialState(["A", "B"], { blockedHandRule: "wipeScores" as any })
+    ).toThrow("blockedHandRule");
+  });
+});
+
 describe("Scoring: Points = sum/5", () => {
 
   it("scores 1 point when sum is 5", () => {
