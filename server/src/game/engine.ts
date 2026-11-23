@@ -107,6 +107,60 @@ function validateConfig(playerCount: number, cfg: Config): void {
   }
 }
 
+function integerConfigValue(
+  value: unknown,
+  fallback: number,
+  name: string,
+  min: number,
+  max: number
+): number {
+  const candidate = value === undefined ? fallback : value;
+  if (
+    typeof candidate !== 'number' ||
+    !Number.isInteger(candidate) ||
+    candidate < min ||
+    candidate > max
+  ) {
+    throw new Error(`Invalid config: ${name} must be an integer from ${min} to ${max}.`);
+  }
+  return candidate;
+}
+
+function enumConfigValue<T extends string>(
+  value: unknown,
+  fallback: T,
+  name: string,
+  allowed: readonly T[]
+): T {
+  const candidate = value === undefined ? fallback : value;
+  if (typeof candidate !== 'string' || !allowed.includes(candidate as T)) {
+    throw new Error(`Invalid config: ${name} must be one of ${allowed.join(', ')}.`);
+  }
+  return candidate as T;
+}
+
+function normalizeConfig(config?: Partial<Config>): Config {
+  return {
+    maxPips: integerConfigValue(config?.maxPips, DEFAULT_CONFIG.maxPips, 'maxPips', 0, 12),
+    tilesPerPlayer: integerConfigValue(config?.tilesPerPlayer, DEFAULT_CONFIG.tilesPerPlayer, 'tilesPerPlayer', 1, 20),
+    deadTileCount: integerConfigValue(config?.deadTileCount, DEFAULT_CONFIG.deadTileCount, 'deadTileCount', 0, 20),
+    scoringMultiple: integerConfigValue(config?.scoringMultiple, DEFAULT_CONFIG.scoringMultiple, 'scoringMultiple', 1, 20),
+    blockedHandRule: enumConfigValue(
+      config?.blockedHandRule,
+      DEFAULT_CONFIG.blockedHandRule,
+      'blockedHandRule',
+      ['lowestPips', 'noScore'] as const
+    ),
+    endHandBonus: enumConfigValue(
+      config?.endHandBonus,
+      DEFAULT_CONFIG.endHandBonus,
+      'endHandBonus',
+      ['sumOpponentPenalties', 'none'] as const
+    ),
+    winningScore: integerConfigValue(config?.winningScore, DEFAULT_CONFIG.winningScore, 'winningScore', 1, 1000),
+  };
+}
+
 function canonicalTileId(tile: Tile): string {
   const low = Math.min(tile.low, tile.high);
   const high = Math.max(tile.low, tile.high);
@@ -256,7 +310,7 @@ export function createInitialState(
     throw new Error('Dominoes requires 2–4 players.');
   }
 
-  const cfg: Config = { ...DEFAULT_CONFIG, ...config };
+  const cfg = normalizeConfig(config);
   validateConfig(players.length, cfg);
 
   const playerStates: Record<string, PlayerState> = {};
