@@ -59,6 +59,16 @@ describe("Racehorse Engine Core Rules", () => {
     expect(total).toBe(28);
   });
 
+  it("rejects config values that can exhaust resources or corrupt scoring", () => {
+    expect(() =>
+      createInitialState(["A", "B"], { maxPips: 100000 })
+    ).toThrow(/maxPips/);
+
+    expect(() =>
+      createInitialState(["A", "B"], { scoringMultiple: 0 })
+    ).toThrow(/scoringMultiple/);
+  });
+
   it("last-tile double is legal and forces draw when boneyard has tiles", () => {
     const state = setupState({
       board: {
