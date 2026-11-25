@@ -1,4 +1,4 @@
-import { GameState, Config, PlacementPosition, Move } from "./game/types";
+import { GameState, Config, PlacementPosition, Move, Tile, DEFAULT_CONFIG } from "./game/types";
 import {
   createInitialState,
   startNewHand,
@@ -19,6 +19,7 @@ export type Room = {
 };
 
 const rooms = new Map<RoomCode, Room>();
+const HIDDEN_TILE: Tile = { high: -1, low: -1 };
 
 function makeCode(len = 5): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -67,22 +68,87 @@ export function getRoom(code: string): Room {
   return room;
 }
 
-export function startGame(code: string): Room {
+function assertRoomPlayer(room: Room, socketId: string): void {
+  if (!room.players.includes(socketId)) {
+    throw new Error("Socket is not a player in this room.");
+  }
+}
+
+function assertIntegerInRange(
+  name: keyof Config,
+  value: number,
+  min: number,
+  max: number
+): void {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`Invalid config: ${name} must be an integer from ${min} to ${max}.`);
+  }
+}
+
+function validateRoomConfig(playerCount: number, config: Partial<Config>): Config {
+  const cfg: Config = { ...DEFAULT_CONFIG, ...config };
+
+  assertIntegerInRange("maxPips", cfg.maxPips, 0, 12);
+  assertIntegerInRange("tilesPerPlayer", cfg.tilesPerPlayer, 1, 20);
+  assertIntegerInRange("deadTileCount", cfg.deadTileCount, 0, 50);
+  assertIntegerInRange("scoringMultiple", cfg.scoringMultiple, 1, 100);
+  assertIntegerInRange("winningScore", cfg.winningScore, 1, 1000);
+
+  if (!["lowestPips", "noScore"].includes(cfg.blockedHandRule)) {
+    throw new Error("Invalid config: blockedHandRule is not supported.");
+  }
+  if (!["sumOpponentPenalties", "none"].includes(cfg.endHandBonus)) {
+    throw new Error("Invalid config: endHandBonus is not supported.");
+  }
+
+  const total = ((cfg.maxPips + 1) * (cfg.maxPips + 2)) / 2;
+  const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
+  if (needed > total) {
+    throw new Error(
+      `Invalid config: ${needed} tiles requested but a double-${cfg.maxPips} set only has ${total}.`
+    );
+  }
+
+  return cfg;
+}
+
+function hiddenTiles(count: number): Tile[] {
+  return Array.from({ length: count }, () => ({ ...HIDDEN_TILE }));
+}
+
+export function getVisibleGameState(state: GameState, playerId: string): GameState {
+  const players = Object.fromEntries(
+    Object.entries(state.players).map(([id, player]) => [
+      id,
+      {
+        ...player,
+        hand: id === playerId ? player.hand : hiddenTiles(player.hand.length),
+      },
+    ])
+  ) as GameState["players"];
+
+  return {
+    ...state,
+    players,
+    boneyard: hiddenTiles(state.boneyard.length),
+    deadTiles: hiddenTiles(state.deadTiles.length),
+  };
+}
+
+export function startGame(code: string, socketId: string): Room {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
 
   if (room.players.length !== 2) {
     throw new Error("Need exactly 2 players to start.");
   }
 
-  // Defensive: If game is in a stale state (handOver but not gameOver), allow restart
-  // This handles edge cases where the room got stuck
-  if (room.state && !room.state.gameOver && !room.state.handOver) {
-    // Game is actively in progress - don't allow restart
+  if (room.state && !room.state.gameOver) {
     throw new Error("Game is already in progress.");
   }
 
-  // Create fresh game state (either first start or restart after stale state)
-  const state0 = createInitialState(room.players, room.config);
+  const config = validateRoomConfig(room.players.length, room.config);
+  const state0 = createInitialState(room.players, config);
   const state1 = startNewHand(state0);
 
   // Auto-draw for starting player until they can open
@@ -96,8 +162,9 @@ export function startGame(code: string): Room {
   return room;
 }
 
-export function nextHand(code: string): Room {
+export function nextHand(code: string, socketId: string): Room {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
   if (!room.state) throw new Error("Game not started.");
 
   if (!room.state.handOver) {
@@ -134,6 +201,7 @@ export function act(
   action: ActionPayload
 ): Room {
   const room = getRoom(code);
+  assertRoomPlayer(room, socketId);
   if (!room.state) throw new Error("Game not started.");
 
   let state = room.state;
