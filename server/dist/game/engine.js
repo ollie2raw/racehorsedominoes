@@ -83,6 +83,22 @@ function isGoingOutIllegal(state, playerId, tile, position) {
     return (0, scoring_1.computePlayScore)(simBoard, state.config) > 0;
 }
 function validateConfig(playerCount, cfg) {
+    const assertIntegerInRange = (field, value, min, max) => {
+        if (!Number.isInteger(value) || value < min || value > max) {
+            throw new Error(`Invalid game config: ${field} must be an integer from ${min} to ${max}.`);
+        }
+    };
+    assertIntegerInRange('maxPips', cfg.maxPips, 0, 12);
+    assertIntegerInRange('tilesPerPlayer', cfg.tilesPerPlayer, 1, 50);
+    assertIntegerInRange('deadTileCount', cfg.deadTileCount, 0, 200);
+    assertIntegerInRange('scoringMultiple', cfg.scoringMultiple, 1, 100);
+    assertIntegerInRange('winningScore', cfg.winningScore, 1, 10000);
+    if (cfg.blockedHandRule !== 'lowestPips' && cfg.blockedHandRule !== 'noScore') {
+        throw new Error('Invalid game config: blockedHandRule is not supported.');
+    }
+    if (cfg.endHandBonus !== 'sumOpponentPenalties' && cfg.endHandBonus !== 'none') {
+        throw new Error('Invalid game config: endHandBonus is not supported.');
+    }
     const total = (0, types_1.totalTilesInSet)(cfg.maxPips);
     const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
     if (needed > total) {
