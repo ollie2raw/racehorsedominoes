@@ -96,6 +96,30 @@ function isGoingOutIllegal(
 }
 
 function validateConfig(playerCount: number, cfg: Config): void {
+  const assertIntegerInRange = (
+    name: keyof Config,
+    min: number,
+    max: number
+  ) => {
+    const value = cfg[name];
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+      throw new Error(`Invalid config: ${name} must be an integer between ${min} and ${max}.`);
+    }
+  };
+
+  assertIntegerInRange('maxPips', 0, 12);
+  assertIntegerInRange('tilesPerPlayer', 1, 20);
+  assertIntegerInRange('deadTileCount', 0, 20);
+  assertIntegerInRange('scoringMultiple', 1, 100);
+  assertIntegerInRange('winningScore', 1, 10000);
+
+  if (!['lowestPips', 'noScore'].includes(cfg.blockedHandRule)) {
+    throw new Error('Invalid config: blockedHandRule is not supported.');
+  }
+  if (!['sumOpponentPenalties', 'none'].includes(cfg.endHandBonus)) {
+    throw new Error('Invalid config: endHandBonus is not supported.');
+  }
+
   const total = totalTilesInSet(cfg.maxPips);
   const needed = playerCount * cfg.tilesPerPlayer + cfg.deadTileCount;
   if (needed > total) {
